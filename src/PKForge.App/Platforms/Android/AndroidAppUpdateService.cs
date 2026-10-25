@@ -1,20 +1,15 @@
 using System.Text.Json;
-#if ANDROID
 using Android.App;
-using Android.Content.PM;
-#endif
 using PKForge.Domain;
 
-#if ANDROID
 [assembly: UsesPermission(Android.Manifest.Permission.RequestInstallPackages)]
 [assembly: UsesPermission(Android.Manifest.Permission.UpdatePackagesWithoutUserAction)]
-#endif
 
-namespace PKForge.App.Services;
+namespace PKForge.App;
 
 /// <summary>Checks GitHub Releases and installs the matching Android APK.
 /// Auto-check failures stay silent; manual checks surface their error in the status bar.</summary>
-public sealed class AppUpdateService
+public sealed class AndroidAppUpdateService : IAppUpdateService
 {
     private const string LatestUrl = "https://api.github.com/repos/sofianeelhor/PKForge/releases/latest";
     private const string SkippedVersionKey = "update_skipped_version";
@@ -27,15 +22,18 @@ public sealed class AppUpdateService
 
     public string SkippedVersion => Preferences.Default.Get(SkippedVersionKey, "");
 
-    public static bool CanInstallUpdates() => CanRequestInstalls();
+    public bool CanInstallUpdates => CanRequestInstalls();
+
+    public event Action<string>? InstallFailed
+    {
+        add => UpdateInstallReceiver.Failed += value;
+        remove => UpdateInstallReceiver.Failed -= value;
+    }
 
     public async Task<AppUpdateCheck> CheckAsync(CancellationToken cancellationToken = default)
     {
         if (AppInfo.Current.PackageName?.EndsWith(".debug", StringComparison.OrdinalIgnoreCase) == true)
             return new AppUpdateCheck(false, null, "Diagnostics builds are updated manually.");
-        // Releases ship an APK only; desktop builds come from source.
-        if (!OperatingSystem.IsAndroid())
-            return new AppUpdateCheck(false, null, "Desktop builds are updated manually.");
 
         using var checkTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         checkTimeout.CancelAfter(TimeSpan.FromSeconds(15));
@@ -87,7 +85,6 @@ public sealed class AppUpdateService
         Action<long, long> onProgress,
         CancellationToken cancellationToken)
     {
-#if ANDROID
         if (!CanRequestInstalls())
         {
             return AppUpdateInstallResult.InstallPermissionRequired;
@@ -130,19 +127,14 @@ public sealed class AppUpdateService
         File.Move(temporary, destination, overwrite: true);
         StartAndroidInstall(destination);
         return AppUpdateInstallResult.InstallerOpened;
-#else
-        await Launcher.OpenAsync(update.ReleaseUrl).ConfigureAwait(false);
-        return AppUpdateInstallResult.ReleasePageOpened;
-#endif
     }
 
-#if ANDROID
 #pragma warning disable CA1416 // Every guarded call checks Build.VERSION explicitly.
     private static bool CanRequestInstalls() =>
         Android.OS.Build.VERSION.SdkInt < Android.OS.BuildVersionCodes.O
         || (Platform.CurrentActivity?.PackageManager ?? Platform.AppContext.PackageManager)?.CanRequestPackageInstalls() == true;
 
-    public static void OpenInstallPermissionSettings()
+    public void OpenInstallPermissionSettings()
     {
         var context = Platform.CurrentActivity ?? Platform.AppContext;
         if (Android.OS.Build.VERSION.SdkInt < Android.OS.BuildVersionCodes.O) return;
@@ -208,14 +200,8 @@ public sealed class AppUpdateService
             || maker.Equals("POCO", StringComparison.OrdinalIgnoreCase)
             || maker.Equals("Redmi", StringComparison.OrdinalIgnoreCase));
 #pragma warning restore CA1416
-#else
-    private static bool CanRequestInstalls() => false;
-
-    public static void OpenInstallPermissionSettings() { }
-#endif
 }
 
-#if ANDROID
 [Android.Content.BroadcastReceiver(Enabled = true, Exported = false)]
 public sealed class UpdateInstallReceiver : Android.Content.BroadcastReceiver
 {
@@ -270,7 +256,7 @@ public sealed class UpdateInstallReceiver : Android.Content.BroadcastReceiver
             {
                 if (!askedUser && apk is not null && File.Exists(apk))
                 {
-                    AppUpdateService.StartAndroidInstall(apk, askUser: true);
+                    AndroidAppUpdateService.StartAndroidInstall(apk, askUser: true);
                     return;
                 }
             }
@@ -282,4 +268,3 @@ public sealed class UpdateInstallReceiver : Android.Content.BroadcastReceiver
         });
     }
 }
-#endif

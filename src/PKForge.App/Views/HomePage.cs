@@ -282,7 +282,7 @@ public sealed class HomePage : ContentPage, IPadHandler
 
         // Returning from Android's install-unknown-apps screen finishes an update the
         // user already accepted with YES. No second question, no manual Check for update.
-        if (_pendingAuthorizedUpdate is { } authorized && AppUpdateService.CanInstallUpdates())
+        if (_pendingAuthorizedUpdate is { } authorized && UpdateService?.CanInstallUpdates == true)
         {
             _pendingAuthorizedUpdate = null;
             Dispatcher.DispatchAsync(async () => await InstallUpdateAsync(authorized));
@@ -347,7 +347,7 @@ public sealed class HomePage : ContentPage, IPadHandler
     /// <summary>Android settings do not trigger MAUI page appearing again; resume does.</summary>
     private void OnAppResumed()
     {
-        if (_pendingAuthorizedUpdate is not { } authorized || !AppUpdateService.CanInstallUpdates())
+        if (_pendingAuthorizedUpdate is not { } authorized || UpdateService?.CanInstallUpdates != true)
             return;
 
         _pendingAuthorizedUpdate = null;
@@ -708,10 +708,13 @@ public sealed class HomePage : ContentPage, IPadHandler
         await _viewModel.RescanCommand.ExecuteAsync(null);
     }
 
+    private static IAppUpdateService? UpdateService =>
+        IPlatformApplication.Current?.Services.GetService<IAppUpdateService>();
+
     /// <summary>Release checks: automatic failures stay quiet, manual failures explain themselves.</summary>
     private async Task CheckForUpdateAsync(bool automatic)
     {
-        var service = IPlatformApplication.Current?.Services.GetService<AppUpdateService>();
+        var service = UpdateService;
         if (service is null) return;
 
         AppUpdateCheck check;
@@ -758,7 +761,7 @@ public sealed class HomePage : ContentPage, IPadHandler
 
     private async Task InstallUpdateAsync(AvailableAppUpdate update)
     {
-        var service = IPlatformApplication.Current!.Services.GetRequiredService<AppUpdateService>();
+        var service = UpdateService ?? throw new InvalidOperationException("No update service is registered.");
         var overlay = LoadingOverlay.Show(_hostGrid, "Downloading the update!",
             $"PKForge {update.Version} is on its way. Android will confirm the installation.");
         AppUpdateInstallResult result;
@@ -794,15 +797,13 @@ public sealed class HomePage : ContentPage, IPadHandler
         {
             case AppUpdateInstallResult.InstallerOpened:
                 _viewModel.Status = "Android is installing the update.";
-#if ANDROID
-                // Android answers later, through the install receiver; a refusal is shown here.
+                // The installer answers later; a refusal is shown here.
                 void OnFailed(string reason)
                 {
-                    UpdateInstallReceiver.Failed -= OnFailed;
+                    service.InstallFailed -= OnFailed;
                     _ = ReportInstallFailureAsync(update, reason);
                 }
-                UpdateInstallReceiver.Failed += OnFailed;
-#endif
+                service.InstallFailed += OnFailed;
                 break;
             case AppUpdateInstallResult.ReleasePageOpened:
                 _viewModel.Status = "The PKForge release page is open.";
@@ -813,7 +814,7 @@ public sealed class HomePage : ContentPage, IPadHandler
                     "Android needs permission to install PKForge updates. Allow install unknown apps for PKForge, then check again?",
                     "OPEN SETTINGS", "NOT NOW");
                 if (permissionChoice == "OPEN SETTINGS")
-                    AppUpdateService.OpenInstallPermissionSettings();
+                    service.OpenInstallPermissionSettings();
                 break;
         }
     }

@@ -20,6 +20,28 @@ public enum AppUpdateInstallResult
     ReleasePageOpened,
 }
 
+/// <summary>
+/// Finds and installs app updates through the host platform. Automatic check failures stay
+/// silent; manual checks surface their error in the status bar.
+/// </summary>
+public interface IAppUpdateService
+{
+    /// <summary>The platform lets the app install an update right now (no permission is missing).</summary>
+    bool CanInstallUpdates { get; }
+
+    /// <summary>Raised when the platform installer refused an update after <see cref="AppUpdateInstallResult.InstallerOpened"/>, with its reason.</summary>
+    event Action<string>? InstallFailed;
+
+    Task<AppUpdateCheck> CheckAsync(CancellationToken cancellationToken = default);
+    bool ShouldPromptAutomatically(AvailableAppUpdate update);
+    void DontRemindMe(AvailableAppUpdate update);
+    Task<AppUpdateInstallResult> DownloadAndInstallAsync(
+        AvailableAppUpdate update, Action<long, long> onProgress, CancellationToken cancellationToken);
+
+    /// <summary>Opens the platform screen that grants the missing install permission.</summary>
+    void OpenInstallPermissionSettings();
+}
+
 /// <summary>Pure release-channel rules. Network and platform services stay in the app layer.</summary>
 public static class AppUpdateRules
 {

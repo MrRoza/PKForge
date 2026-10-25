@@ -85,7 +85,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<GamepadRouter>();
         builder.Services.AddSingleton<SecondScreenState>();
         builder.Services.AddSingleton<SpritePackDownloader>();
-        builder.Services.AddSingleton<AppUpdateService>();
         builder.Services.AddSingleton<TransferService>();
 #if ANDROID
         builder.Services.AddSingleton<ISaveFileAccess, AndroidSafFileAccess>();
@@ -96,6 +95,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFolderPicker, AndroidFolderPicker>();
         builder.Services.AddSingleton<IFolderFileAccess, AndroidFolderFileAccess>();
         builder.Services.AddSingleton<IEmulatorDetectionService, AndroidEmulatorScanner>();
+        builder.Services.AddSingleton<IAppUpdateService, AndroidAppUpdateService>();
 #elif WINDOWS
         builder.Services.AddSingleton<ISaveFileAccess, WindowsFileAccess>();
         builder.Services.AddSingleton<IDocumentPicker, WindowsDocumentPicker>();
@@ -103,6 +103,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
         builder.Services.AddSingleton<IFolderFileAccess, WindowsFolderFileAccess>();
         builder.Services.AddSingleton<IEmulatorDetectionService, WindowsEmulatorScanner>();
+        builder.Services.AddSingleton<IAppUpdateService, DesktopAppUpdateService>();
 #endif
         builder.Services.AddSingleton<IWatchedRootStore, PreferencesWatchedRootStore>();
         builder.Services.AddSingleton<BoxBrowserViewModel>();
