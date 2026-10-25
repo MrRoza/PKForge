@@ -536,6 +536,7 @@ public sealed class PokeparkPage : ContentPage, IPadHandler, IPadStickHandler
 
     private async Task PublishWidgetAsync()
     {
+#if ANDROID
         if (!PokeparkWidgetPublisher.HasActiveWidgets())
         {
             Volatile.Write(ref _publishedWidgetRevision, Volatile.Read(ref _widgetRevision));
@@ -566,6 +567,11 @@ public sealed class PokeparkPage : ContentPage, IPadHandler, IPadStickHandler
             Volatile.Write(ref _publishedWidgetRevision, revision);
         }
         finally { _widgetPublishGate.Release(); }
+#else
+        // The home-screen widget is Android-only: there is never an active widget to draw.
+        Volatile.Write(ref _publishedWidgetRevision, Volatile.Read(ref _widgetRevision));
+        await Task.CompletedTask;
+#endif
     }
 
     private async Task OptionsAsync()

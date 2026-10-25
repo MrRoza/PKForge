@@ -1,6 +1,8 @@
 using System.Text.Json;
+#if ANDROID
 using Android.App;
 using Android.Content.PM;
+#endif
 using PKForge.Domain;
 
 #if ANDROID
@@ -31,6 +33,9 @@ public sealed class AppUpdateService
     {
         if (AppInfo.Current.PackageName?.EndsWith(".debug", StringComparison.OrdinalIgnoreCase) == true)
             return new AppUpdateCheck(false, null, "Diagnostics builds are updated manually.");
+        // Releases ship an APK only; desktop builds come from source.
+        if (!OperatingSystem.IsAndroid())
+            return new AppUpdateCheck(false, null, "Desktop builds are updated manually.");
 
         using var checkTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         checkTimeout.CancelAfter(TimeSpan.FromSeconds(15));
@@ -203,6 +208,10 @@ public sealed class AppUpdateService
             || maker.Equals("POCO", StringComparison.OrdinalIgnoreCase)
             || maker.Equals("Redmi", StringComparison.OrdinalIgnoreCase));
 #pragma warning restore CA1416
+#else
+    private static bool CanRequestInstalls() => false;
+
+    public static void OpenInstallPermissionSettings() { }
 #endif
 }
 

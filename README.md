@@ -191,6 +191,16 @@ dotnet build src/PKForge.App/PKForge.App.csproj -f net10.0-android
 
 Version tags build and publish the APK from CI.
 
+On Windows (with the `maui-windows` workload) the app also runs on the desktop:
+
+```bash
+dotnet build src/PKForge.App/PKForge.App.csproj -f net10.0-windows10.0.19041.0
+dotnet run --project src/PKForge.App/PKForge.App.csproj -f net10.0-windows10.0.19041.0
+```
+
+The desktop build has no background music, second screen, home-screen widget or in-app updates.
+Saves and emulator folders are opened straight from disk; right-click stands in for long-press.
+
 ### Layout
 
 ```

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-android</TargetFramework>
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>PKForge.App</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -12,7 +13,18 @@
     <ApplicationTitle>PKForge</ApplicationTitle>
     <ApplicationVersion>311</ApplicationVersion>
     <ApplicationDisplayVersion>3.1.1</ApplicationDisplayVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' == 'android'">
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' == 'windows'">
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <!-- Unpackaged: runs as a plain .exe (dotnet run / double-click), no MSIX install. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- [ObservableProperty] fields are bound by MAUI, not WinUI XAML, so CsWinRT AOT marshalling never applies. -->
+    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(DiagnosticBuild)' == 'true'">
     <!-- Diagnostic builds install beside production and cannot overwrite its app-private data. -->
@@ -34,7 +46,7 @@
     <PackageReference Include="ZXing.Net" Version="0.16.10" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidLinkDescription Include="Platforms/Android/linker.xml" />
+    <AndroidLinkDescription Include="Platforms/Android/linker.xml" Condition="'$([MSBuild]::GetTargetPlatformIdentifier($(TargetFramework)))' == 'android'" />
     <MauiIcon Include="Resources/AppIcon/pkforge.png" Color="#14121D" />
     <MauiSplashScreen Include="Resources/Splash/splash.png" Color="#14121D" BaseSize="180,180" />
     <MauiFont Include="Resources/Fonts/*.ttf" />

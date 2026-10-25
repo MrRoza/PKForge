@@ -96,6 +96,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFolderPicker, AndroidFolderPicker>();
         builder.Services.AddSingleton<IFolderFileAccess, AndroidFolderFileAccess>();
         builder.Services.AddSingleton<IEmulatorDetectionService, AndroidEmulatorScanner>();
+#elif WINDOWS
+        builder.Services.AddSingleton<ISaveFileAccess, WindowsFileAccess>();
+        builder.Services.AddSingleton<IDocumentPicker, WindowsDocumentPicker>();
+        builder.Services.AddSingleton<ISecondaryDisplayHost, NoSecondaryDisplayHost>();
+        builder.Services.AddSingleton<IFolderPicker, WindowsFolderPicker>();
+        builder.Services.AddSingleton<IFolderFileAccess, WindowsFolderFileAccess>();
+        builder.Services.AddSingleton<IEmulatorDetectionService, WindowsEmulatorScanner>();
 #endif
         builder.Services.AddSingleton<IWatchedRootStore, PreferencesWatchedRootStore>();
         builder.Services.AddSingleton<BoxBrowserViewModel>();

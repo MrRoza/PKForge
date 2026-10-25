@@ -144,6 +144,7 @@ public sealed class HomePage : ContentPage, IPadHandler
     /// </summary>
     private static void BlockNativeFocus(View view)
     {
+#if ANDROID
         view.HandlerChanged += (_, _) =>
         {
             if (view.Handler?.PlatformView is Android.Views.View platform)
@@ -152,6 +153,7 @@ public sealed class HomePage : ContentPage, IPadHandler
                 platform.FocusableInTouchMode = false;
             }
         };
+#endif
     }
 
     /// <summary>
@@ -163,6 +165,11 @@ public sealed class HomePage : ContentPage, IPadHandler
     /// </summary>
     private static void AttachPress(View view, Action onTap, Action onLongPress)
     {
+#if !ANDROID
+        // Desktop: click is the tap, right-click is the long press.
+        view.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(onTap) });
+        view.GestureRecognizers.Add(new TapGestureRecognizer { Buttons = ButtonsMask.Secondary, Command = new Command(onLongPress) });
+#else
         view.HandlerChanged += (_, _) =>
         {
             if (view.Handler?.PlatformView is not Android.Views.View platform) return;
@@ -206,6 +213,7 @@ public sealed class HomePage : ContentPage, IPadHandler
                 e.Handled = true;
             };
         };
+#endif
     }
 
     // Once per launch, not per page: a color scheme change rebuilds Home, and the new page
@@ -713,7 +721,7 @@ public sealed class HomePage : ContentPage, IPadHandler
         }
         catch (Exception error)
         {
-            Android.Util.Log.Warn("PKForgeUpdate", $"Automatic update check failed: {error}");
+            AppLog.Warn("update", $"Automatic update check failed: {error}");
             if (!automatic)
                 _viewModel.Status = $"Update check failed: {error.Message}";
             return;
@@ -769,7 +777,7 @@ public sealed class HomePage : ContentPage, IPadHandler
         }
         catch (Exception error)
         {
-            Android.Util.Log.Error("PKForgeUpdate", $"Download/install failed: {error}");
+            AppLog.Error("update", "Download/install failed", error);
             _viewModel.Status = $"Update failed: {error.Message}";
             var openRelease = await PadMenu.ConfirmAsync(_hostGrid, "Open the release page?",
                 "The in-app installer could not finish. The GitHub release page has the same APK.", "Open");
