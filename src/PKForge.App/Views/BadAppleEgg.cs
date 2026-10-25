@@ -1,6 +1,3 @@
-#if ANDROID
-using MediaPlayer = Android.Media.MediaPlayer;
-#endif
 using PKForge.App.Services;
 using PKForge.Chrome;
 using PKForge.Domain;
@@ -27,9 +24,8 @@ public sealed class BadAppleEgg : IPadHandler
     private readonly BadApplePainter _painter;
     private readonly SKFont _font = new(BoxBrowserPage.PixelTypeface(), 20);
     private readonly IMusicPlayer? _music;
-#if ANDROID
-    private MediaPlayer? _song;
-#endif
+    private readonly IEasterEggSong _song;
+    private bool _hasSong;
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private bool _closed;
 
@@ -60,6 +56,7 @@ public sealed class BadAppleEgg : IPadHandler
         _music = services?.GetService<IMusicPlayer>();
         _music?.PauseForBackground();
         App.Suspended += Close;
+        _song = services?.GetService<IEasterEggSong>() ?? new NoEasterEggSong();
 
         _canvas = new SKCanvasView { EnableTouchEvents = true };
         _canvas.PaintSurface += Paint;
@@ -78,37 +75,10 @@ public sealed class BadAppleEgg : IPadHandler
         _ = StartSongAsync();
     }
 
-    /// <summary>The song plays from a copy in the cache: MediaPlayer cannot read the APK's compressed assets.</summary>
     private async Task StartSongAsync()
     {
-#if ANDROID
-        try
-        {
-            var path = Path.Combine(FileSystem.CacheDirectory, "badapple.m4a");
-            if (!File.Exists(path))
-            {
-                await using var asset = await FileSystem.OpenAppPackageFileAsync("badapple/audio.m4a");
-                var partial = path + ".part";
-                await using (var file = File.Create(partial)) await asset.CopyToAsync(file);
-                File.Move(partial, path, overwrite: true);
-            }
-            if (_closed) return;
-            var song = new MediaPlayer();
-            song.SetDataSource(path);
-            song.Prepare();
-            song.Completion += (_, _) => MainThread.BeginInvokeOnMainThread(Close);
-            if (_closed) { song.Release(); return; }
-            _song = song;
-            song.Start();
-        }
-        catch (Exception error) when (error is IOException or Java.Lang.Exception)
-        {
-            // No song: the picture still plays, on its own clock.
-            AppLog.Warn("about", $"The easter egg plays without its song: {error.Message}");
-        }
-#else
-        await Task.CompletedTask;
-#endif
+        // No song: the picture still plays, on its own clock.
+        _hasSong = await _song.StartAsync(Close);
         _clock.Start();
         _frame.Request();
     }
@@ -126,11 +96,7 @@ public sealed class BadAppleEgg : IPadHandler
         App.Suspended -= Close;
         _router?.Remove(this);
         _host.Remove(_overlay);
-#if ANDROID
-        _song?.Stop();
-        _song?.Release();
-        _song = null;
-#endif
+        _song.Dispose();
         _frames.Dispose();
         _font.Dispose();
         _music?.ResumeFromBackground();
@@ -143,19 +109,11 @@ public sealed class BadAppleEgg : IPadHandler
         var theme = ColorTheme.Current;
         canvas.Clear(theme.Void);
         if (_closed || !_clock.IsRunning) return;
-#if ANDROID
-        var ms = _song is { } song ? song.CurrentPosition : _clock.ElapsedMilliseconds;
-#else
-        var ms = _clock.ElapsedMilliseconds;
-#endif
+        var ms = _hasSong ? _song.PositionMs : _clock.ElapsedMilliseconds;
         if (!_frames.SeekForward((int)(ms * _frames.Fps / 1000)))
         {
-#if ANDROID
-            if (_song is null) MainThread.BeginInvokeOnMainThread(Close);
-#else
-            // Desktop plays without the song: the last frame ends it.
-            MainThread.BeginInvokeOnMainThread(Close);
-#endif
+            // With the song, its end closes the egg; without it, the last frame does.
+            if (!_hasSong) MainThread.BeginInvokeOnMainThread(Close);
             return;
         }
         _painter.Paint(canvas, new SKRect(0, 0, args.Info.Width, args.Info.Height), _frames, _font, theme);
