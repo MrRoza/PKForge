@@ -26,8 +26,8 @@ public sealed class BadAppleEgg : IPadHandler
     private readonly BadAppleFrames _frames;
     private readonly BadApplePainter _painter;
     private readonly SKFont _font = new(BoxBrowserPage.PixelTypeface(), 20);
+    private readonly IMusicPlayer? _music;
 #if ANDROID
-    private readonly Platforms.Android.MusicPlayer? _music;
     private MediaPlayer? _song;
 #endif
     private readonly System.Diagnostics.Stopwatch _clock = new();
@@ -57,10 +57,8 @@ public sealed class BadAppleEgg : IPadHandler
         _painter = new BadApplePainter(_font, "PKFORGE·" + string.Concat(names.Select(name => name.ToUpperInvariant() + "·")));
 
         // The player's music steps aside the way it does when the app leaves the screen.
-#if ANDROID
-        _music = services?.GetService<IMusicPlayer>() as Platforms.Android.MusicPlayer;
+        _music = services?.GetService<IMusicPlayer>();
         _music?.PauseForBackground();
-#endif
         App.Suspended += Close;
 
         _canvas = new SKCanvasView { EnableTouchEvents = true };
@@ -135,9 +133,7 @@ public sealed class BadAppleEgg : IPadHandler
 #endif
         _frames.Dispose();
         _font.Dispose();
-#if ANDROID
         _music?.ResumeFromBackground();
-#endif
         _done.TrySetResult();
     }
 

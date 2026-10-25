@@ -117,4 +117,13 @@ public interface IMusicPlayer
     void SetSource(MusicPlace place, MusicSource source);
     /// <summary>The player moved: the music fades to that place's, or carries on when it is the same.</summary>
     void EnterPlace(MusicPlace place);
+
+    /// <summary>Starts playback at app launch when the user asked for it.</summary>
+    void MaybeAutostart();
+    /// <summary>The app left the screen (Home, another app): music stops with it.</summary>
+    void PauseForBackground();
+    /// <summary>The app is back: music paused by <see cref="PauseForBackground"/> carries on.</summary>
+    void ResumeFromBackground();
+    /// <summary>Set when playback fails; the UI shows it so failures are never silent.</summary>
+    string? LastError { get; }
 }

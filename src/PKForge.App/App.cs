@@ -12,20 +12,8 @@ public sealed class App : Application
         base.OnSleep();
     }
 
-#if ANDROID
-    private static Platforms.Android.MusicPlayer? Music =>
-        IPlatformApplication.Current?.Services.GetService<Domain.IMusicPlayer>() as Platforms.Android.MusicPlayer;
-#else
-    // Background music is Android-only for now: no player, nothing to pause or resume.
-    private static NoMusic? Music => null;
-
-    private sealed class NoMusic
-    {
-        public void PauseForBackground() { }
-        public void ResumeFromBackground() { }
-        public void MaybeAutostart() { }
-    }
-#endif
+    private static Domain.IMusicPlayer? Music =>
+        IPlatformApplication.Current?.Services.GetService<Domain.IMusicPlayer>();
 
     /// <summary>The user's optional default background music starts with the app, once.</summary>
     protected override void OnStart()

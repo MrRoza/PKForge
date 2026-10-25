@@ -88,8 +88,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<TransferService>();
 #if ANDROID
         builder.Services.AddSingleton<ISaveFileAccess, AndroidSafFileAccess>();
-        builder.Services.AddSingleton<Platforms.Android.MusicPlayer>();
-        builder.Services.AddSingleton<IMusicPlayer>(sp => sp.GetRequiredService<Platforms.Android.MusicPlayer>());
+        builder.Services.AddSingleton<IMusicPlayer, Platforms.Android.MusicPlayer>();
         builder.Services.AddSingleton<IDocumentPicker, AndroidDocumentPicker>();
         builder.Services.AddSingleton<ISecondaryDisplayHost, AndroidSecondaryDisplayHost>();
         builder.Services.AddSingleton<IFolderPicker, AndroidFolderPicker>();
@@ -104,6 +103,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IFolderFileAccess, WindowsFolderFileAccess>();
         builder.Services.AddSingleton<IEmulatorDetectionService, WindowsEmulatorScanner>();
         builder.Services.AddSingleton<IAppUpdateService, DesktopAppUpdateService>();
+        builder.Services.AddSingleton<IMusicPlayer, NoMusic>();
 #endif
         builder.Services.AddSingleton<IWatchedRootStore, PreferencesWatchedRootStore>();
         builder.Services.AddSingleton<BoxBrowserViewModel>();

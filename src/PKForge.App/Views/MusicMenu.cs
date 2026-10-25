@@ -30,10 +30,8 @@ public static class MusicMenu
                 ? $"Playing: {music.Library[index].Title}"
                 : music.IsOn && music.Library.Count > 0 ? $"Silence here ({PlaceName(music.Place)})."
                 : $"Library: {music.Library.Count} track(s)";
-#if ANDROID
-            if (music is Platforms.Android.MusicPlayer { LastError: { } error })
+            if (music.LastError is { } error)
                 message += $"\nLast error: {error}";
-#endif
             PadOption[] options =
             [
                 new(music.IsOn ? "Pause" : "Play", IconPath: music.IsOn ? "pause" : "play"),
