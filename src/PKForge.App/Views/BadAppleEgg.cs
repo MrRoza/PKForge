@@ -24,7 +24,7 @@ public sealed class BadAppleEgg : IPadHandler
     private readonly BadApplePainter _painter;
     private readonly SKFont _font = new(BoxBrowserPage.PixelTypeface(), 20);
     private readonly IMusicPlayer? _music;
-    private readonly IEasterEggSong _song;
+    private readonly IEasterEggSong? _song;
     private bool _hasSong;
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private bool _closed;
@@ -56,7 +56,7 @@ public sealed class BadAppleEgg : IPadHandler
         _music = services?.GetService<IMusicPlayer>();
         _music?.PauseForBackground();
         App.Suspended += Close;
-        _song = services?.GetService<IEasterEggSong>() ?? new NoEasterEggSong();
+        _song = services?.GetService<IEasterEggSong>();
 
         _canvas = new SKCanvasView { EnableTouchEvents = true };
         _canvas.PaintSurface += Paint;
@@ -78,7 +78,7 @@ public sealed class BadAppleEgg : IPadHandler
     private async Task StartSongAsync()
     {
         // No song: the picture still plays, on its own clock.
-        _hasSong = await _song.StartAsync(Close);
+        _hasSong = _song is not null && await _song.StartAsync(Close);
         _clock.Start();
         _frame.Request();
     }
@@ -96,7 +96,7 @@ public sealed class BadAppleEgg : IPadHandler
         App.Suspended -= Close;
         _router?.Remove(this);
         _host.Remove(_overlay);
-        _song.Dispose();
+        _song?.Dispose();
         _frames.Dispose();
         _font.Dispose();
         _music?.ResumeFromBackground();
@@ -109,7 +109,7 @@ public sealed class BadAppleEgg : IPadHandler
         var theme = ColorTheme.Current;
         canvas.Clear(theme.Void);
         if (_closed || !_clock.IsRunning) return;
-        var ms = _hasSong ? _song.PositionMs : _clock.ElapsedMilliseconds;
+        var ms = _hasSong ? _song!.PositionMs : _clock.ElapsedMilliseconds;
         if (!_frames.SeekForward((int)(ms * _frames.Fps / 1000)))
         {
             // With the song, its end closes the egg; without it, the last frame does.
